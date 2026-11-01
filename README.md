@@ -1,82 +1,74 @@
 # CodeBoo
 
-> A local code debt and TODO analyzer powered by open-weight AI models.
+Paste a public GitHub link or a folder on your computer. CodeBoo looks through the code for forgotten promises, risky spots and quiet failures, ranks them by urgency, and shows each one as a ghost. Small problems are cute little wisps. Serious ones are tall, glowing and a bit scary. A model running on your own machine explains the most urgent ones in everyday words.
 
-CodeBoo scans your source code files to surface forgotten `TODO` comments, potential memory leaks, unhandled exceptions, and security risks. Issues are categorized and ranked by severity (from routine refactors to critical memory bugs) and presented visually on a lightweight local dashboard.
+Built for the DEV Hacktoberfest 2026 "Ghost in the Machine" challenge, with open-weight models doing the explaining.
 
----
+## What it finds
 
-## Features
+| Ghost | What it means | Examples |
+| --- | --- | --- |
+| Leaked secret | Keys or passwords typed into the code | Private keys, cloud and GitHub tokens, hard-coded passwords |
+| Risky code | Code that could be tricked into doing something harmful | Running text as code, shell commands, unsafe loading of saved data, database questions built by gluing text |
+| Weak spot | Settings that make an app easier to attack | Switched-off certificate checks, old hash methods, debug mode, open permissions |
+| Possible leak | Resources that may never be released | Files never closed, timers never stopped, memory never freed |
+| Quiet failure | Errors that are caught and hidden | Empty catch blocks, bare `except:` |
+| Forgotten promise | Notes-to-self nobody came back to | `TODO`, `FIXME`, `HACK`, `XXX`, `BUG` comments |
 
-- **Automated Technical Debt Analysis:** Recursively parses local directories or cloned GitHub repositories to extract TODO items, missing error handlers, and resource leaks.
-- **Severity Classification:** Rates issues on a 1–5 urgency scale:
-  - **Level 1–2 (Harmless):** Cosmetic fixes, routine TODOs, and styling tasks.
-  - **Level 3–4 (Specter):** Unhandled exceptions, dead code, and inefficient loops.
-  - **Level 5 (Phantom):** Critical memory leaks, unclosed resources, and security vulnerabilities.
-- **Privacy-First Inference:** Runs entirely locally via Ollama. No code is transmitted to cloud APIs or external servers.
-- **Low-RAM Footprint:** Engineered to run smoothly on machines with 4–6 GB of free system memory.
+Each ghost has one of five levels: Wisp, Little ghost, Haunting, Specter and Phantom, from "tidy up whenever" to "fix today".
 
----
+## How it works
 
-## Tech Stack
+1. **Fetch.** For a GitHub link, the app downloads the repository's zip archive (no git needed) into a temporary folder and deletes it afterwards. For a folder path, it reads the folder in place.
+2. **Scan.** About 20 plain, readable rules (see `hunt.py`) look through the code files. Test, example and documentation folders get a lower urgency, and obvious placeholders such as `changeme` are ignored.
+3. **Rank.** Findings are ranked by urgency, and the ghosts appear right away.
+4. **Explain.** The most urgent 24 ghosts are sent, a few at a time, to a local model through Ollama. The model sees only a short code excerpt (secret values hidden) and writes a plain-English explanation and a fix. It can also say a finding looks harmless, which lowers its urgency. The model can move a ghost's urgency only a little, so one bad answer can't bury a real problem. When all explanations are in, the list is ranked again.
 
-- **Inference Engine:** Ollama (`qwen2.5-coder:7b`, `gemma2:9b`, or `gemma4:2b`)
-- **Backend:** Python 3.10+ (Standard Library / FastAPI)
-- **Frontend:** Single-page HTML/CSS/JS with custom CSS issue visualization
+If Ollama isn't running, you still get every ghost with a built-in explanation. Only the model-written wording is missing.
 
----
+## Requirements
 
-## Quick Start
+- Python 3.8 or newer. There is nothing to install with pip.
+- [Ollama](https://ollama.com) with a model pulled, for the plain-English explanations (optional but recommended).
+- An internet connection, only when fetching from GitHub.
 
-### 1. Prerequisites
+## Run it
 
-Ensure [Ollama](https://ollama.ai/) is installed and running. Pull your preferred code analysis model:
+1. Pull a model with its full tag: `ollama pull gemma4:e4b`
+2. From this folder: `python3 hunt.py` (on Windows, `python hunt.py`)
+3. Open http://127.0.0.1:8766
 
-```bash
-ollama pull qwen2.5-coder:7b
-```
+To use a different model, set `HUNT_MODEL`:
+- macOS or Linux: `HUNT_MODEL=qwen3.5:4b python3 hunt.py`
+- Windows (PowerShell): `$env:HUNT_MODEL="qwen3.5:4b"; python hunt.py`
 
-### 2. Installation
+## Settings
 
-Clone the repository and navigate into the project directory:
+All are optional environment variables.
 
-```bash
-git clone https://github.com/your-username/codeboo.git
-cd codeboo
-```
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `HUNT_MODEL` | `gemma4:e4b` | The Ollama model that writes the explanations |
+| `OLLAMA_URL` | `http://localhost:11434` | Where Ollama is running |
+| `PORT` | `8766` | Port for the page |
+| `ARCHIVE_URL` | GitHub's archive address | Advanced: where repository zips are fetched from |
 
-### 3. Usage
+## Limits
 
-Run the server:
+- This is a quick look with simple rules, not a security audit. Some ghosts are false alarms, and real problems can hide from a scan like this.
+- Leak detection is a rough guess based on patterns, for example a file opened with no close anywhere in the same file.
+- The model judges a short excerpt, not the whole project, so it often says "hard to tell".
+- Only public GitHub repositories work. Private repositories need a folder on your computer instead.
+- Use the repository link, or a branch link such as `https://github.com/owner/repo/tree/main`. Links to a sub-folder of a repository aren't supported.
+- Limits keep a hunt quick: up to 800 files of 300 KB or less, 60 ghosts shown, and the 24 most urgent explained.
+- It does not show how old a note-to-self is, because a downloaded archive has no history.
 
-```bash
-python main.py
-```
+## Privacy
 
-Open your browser and navigate to `http://localhost:8000`. Enter a local file path or repository URL to run a scan.
+- The server listens on localhost only and never logs paths or code.
+- Code is scanned on your computer, and the model runs on your computer. The only network use is downloading a GitHub archive when you ask for one.
+- Secret values are hidden in everything shown on the page and everything sent to the model.
 
----
+## Models and licenses
 
-## Configuration
-
-You can customize the model used for scanning in `config.py`:
-
-```python
-# config.py
-OLLAMA_MODEL = "qwen2.5-coder:7b"  # Or "gemma2:9b", "gemma4:2b"
-OLLAMA_HOST = "http://localhost:11434"
-MAX_FILE_SIZE_KB = 100
-```
-
----
-
-## Limitations
-
-- **Large Codebases:** Repositories with thousands of files are scanned module-by-module to keep context sizes within local memory limits.
-- **Static Analysis Scope:** CodeBoo performs semantic static inspection; deep execution profiling still requires runtime profiling tools.
-
----
-
-## License
-
-Distributed under the MIT License. See `LICENSE` for details.
+Each model has its own license. Check the model card for whichever model you use before you publish anything made with it.

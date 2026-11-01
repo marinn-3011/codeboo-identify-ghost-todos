@@ -1,0 +1,8 @@
+# Python and OS clutter
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+
+# Local settings and secrets, in case you add any
+.env

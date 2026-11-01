@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12081f">
+<title>CodeBoo</title>
+<style>
+  :root {
+    --bg1: #12081f;
+    --bg2: #20103c;
+    --bg3: #321a55;
+    --text: #f6eeff;
+    --soft: #c4b3e0;
+    --line: rgba(196, 179, 224, 0.25);
+    --card: rgba(30, 15, 56, 0.82);
+    --pumpkin: #ffa94d;
+    --mint: #8de8c8;
+    --lav: #b9a4ff;
+    --amber: #ffcf6b;
+    --ember: #ff8a4c;
+    --crimson: #ff5d7a;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg1); }
+  body { margin: 0; min-height: 100vh; color: var(--text); font-family: var(--sans); line-height: 1.55; }
+  :focus-visible { outline: 2px solid var(--pumpkin); outline-offset: 3px; }
+
+  /* sky: gradient, a moon, and a few stars */
+  .sky {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    background:
+      radial-gradient(50rem 22rem at 50% 112%, rgba(255, 138, 76, 0.22), transparent 70%),
+      linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+  }
+  .moon {
+    position: absolute; top: 5vh; right: 8vw; width: 5.5rem; height: 5.5rem; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff8e4, #f3dfae 70%);
+    box-shadow: 0 0 60px 18px rgba(255, 225, 160, 0.22);
+    opacity: 0.9;
+  }
+  .moon::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background:
+    radial-gradient(circle at 62% 60%, rgba(190, 160, 110, 0.35) 0 9%, transparent 10%),
+    radial-gradient(circle at 30% 68%, rgba(190, 160, 110, 0.3) 0 6%, transparent 7%),
+    radial-gradient(circle at 48% 28%, rgba(190, 160, 110, 0.25) 0 5%, transparent 6%); }
+  .stars { position: absolute; top: 0; left: 0; width: 1px; height: 1px; border-radius: 50%; background: transparent; will-change: opacity; }
+  .stars.a { animation: twinkle 6s ease-in-out infinite; }
+  .stars.b { animation: twinkle 8.5s ease-in-out -3s infinite; }
+  @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+  .page { position: relative; z-index: 1; max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+  header { text-align: center; margin-bottom: 1.8rem; }
+  .hero-ghost { width: 5rem; height: auto; display: inline-block; animation: bob 4s ease-in-out infinite; }
+  h1 {
+    margin: 0.2rem 0 0.4rem; font-family: var(--serif); font-style: italic; font-weight: 400;
+    font-size: clamp(2.4rem, 8vw, 4rem); line-height: 1.05; color: #fff1d6;
+  }
+  .lede { max-width: 36rem; margin: 0 auto; color: var(--soft); }
+
+  .hunt-form { display: flex; flex-wrap: wrap; gap: 0.7rem; max-width: 44rem; margin: 1.6rem auto 0.6rem; }
+  .hunt-form input {
+    flex: 1 1 18rem; min-width: 0; padding: 0.85rem 1.1rem; font: inherit; font-size: 1rem; color: var(--text);
+    background: rgba(12, 6, 24, 0.7); border: 1px solid var(--line); border-radius: 999px;
+  }
+  .hunt-form input::placeholder { color: var(--soft); opacity: 0.75; }
+  .go {
+    font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: #2a1405;
+    background: linear-gradient(180deg, #ffd596, #ffa94d); border: 0; border-radius: 999px;
+    padding: 0.75rem 1.8rem; cursor: pointer; box-shadow: 0 6px 22px rgba(255, 138, 76, 0.35);
+  }
+  .go:hover { filter: brightness(1.06); }
+  .go[disabled] { opacity: 0.6; cursor: progress; }
+
+  .status { text-align: center; font-size: 0.85rem; color: var(--soft); margin: 0.3rem 0 0; }
+  .status .dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--line); margin-right: 0.45rem; }
+  .status.ok .dot { background: var(--mint); }
+  .status.bad .dot { background: var(--crimson); }
+
+  .error { max-width: 44rem; margin: 1rem auto 0; padding: 0.8rem 1rem; border-radius: 0.8rem; background: rgba(255, 93, 122, 0.14); border: 1px solid var(--crimson); font-size: 0.92rem; }
+  .error[hidden], #summary[hidden], #list-wrap[hidden], .busy[hidden] { display: none; }
+
+  /* thread-and-shuttle progress line */
+  .busy { position: relative; overflow: hidden; max-width: 30rem; margin: 1.2rem auto 0; padding-top: 0.8rem; text-align: center; color: var(--soft); font-style: italic; font-family: var(--serif); }
+  .busy::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--line); }
+  .busy::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 30%; height: 2px; z-index: 1;
+    background: linear-gradient(90deg, transparent, var(--pumpkin), transparent);
+    animation: shuttle 2.2s ease-in-out infinite alternate;
+  }
+  @keyframes shuttle { to { transform: translateX(233%); } }
+
+  /* summary */
+  #summary { margin-top: 2rem; padding: 1.3rem 1.4rem; border: 1px solid var(--line); border-radius: 1.1rem; background: var(--card); }
+  #summary h2 { margin: 0 0 0.2rem; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.7rem; color: #fff1d6; }
+  .repo { font-size: 0.88rem; color: var(--soft); margin: 0 0 1rem; }
+  .counts { display: flex; flex-wrap: wrap; gap: 0.7rem 1.4rem; align-items: flex-end; }
+  .count { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--soft); }
+  .count svg { width: 2rem; height: auto; }
+  .count b { font-size: 1.25rem; color: var(--text); font-weight: 600; }
+  .note { margin: 1rem 0 0; font-size: 0.82rem; color: var(--soft); }
+
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; margin: 1.6rem 0 0.8rem; font-size: 0.9rem; color: var(--soft); }
+  .toolbar label { display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; }
+  input[type="checkbox"] { accent-color: var(--pumpkin); width: 1rem; height: 1rem; }
+
+  /* ghost cards */
+  .ghosts { display: grid; gap: 0.9rem; }
+  .card {
+    --edge: var(--mint);
+    display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 1rem; align-items: start;
+    padding: 1rem 1.1rem; border-radius: 1.1rem; background: var(--card);
+    border: 1px solid var(--edge);
+    border: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
+  }
+  .card.l2 { --edge: var(--lav); }
+  .card.l3 { --edge: var(--amber); }
+  .card.l4 { --edge: var(--ember); box-shadow: 0 0 20px rgba(255, 138, 76, 0.14); }
+  .card.l5 { --edge: var(--crimson); box-shadow: 0 0 28px rgba(255, 93, 122, 0.22); }
+  .figure { display: flex; align-items: center; justify-content: center; min-height: 6rem; }
+  .figure svg { height: auto; animation: bob var(--bob, 4s) ease-in-out var(--delay, 0s) infinite; }
+  .card.l4 .figure svg { animation-name: bob, jitter; animation-duration: var(--bob, 4s), 0.45s; animation-iteration-count: infinite, infinite; }
+  .card.l5 .figure svg { animation-name: bob, jitter; animation-duration: var(--bob, 3s), 0.3s; animation-iteration-count: infinite, infinite; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  @keyframes jitter { 0%, 100% { rotate: 0deg; } 25% { rotate: -1.6deg; } 75% { rotate: 1.6deg; } }
+
+  .tags { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.7rem; }
+  .level { font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: var(--edge); }
+  .kind { font-size: 0.82rem; color: var(--soft); }
+  .urgency { margin-left: auto; font-size: 0.78rem; padding: 0.1rem 0.6rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--edge) 60%, transparent); color: var(--edge); }
+  .where { margin: 0.1rem 0 0.5rem; font-family: var(--mono); font-size: 0.78rem; color: var(--soft); overflow-wrap: anywhere; }
+  .plain { margin: 0 0 0.45rem; }
+  .fix { margin: 0; color: var(--soft); font-size: 0.93rem; }
+  .fix b { color: var(--text); font-weight: 600; }
+  .verdict { display: inline-block; margin-top: 0.55rem; font-size: 0.75rem; padding: 0.1rem 0.6rem; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: var(--soft); }
+  .verdict.fine { background: rgba(141, 232, 200, 0.16); color: var(--mint); }
+  .verdict.real { background: rgba(255, 138, 76, 0.18); color: var(--ember); }
+  details { margin-top: 0.6rem; font-size: 0.85rem; }
+  summary { cursor: pointer; color: var(--soft); }
+  pre { margin: 0.5rem 0 0; padding: 0.7rem 0.9rem; overflow-x: auto; border-radius: 0.6rem; background: rgba(8, 4, 16, 0.7); font-family: var(--mono); font-size: 0.78rem; color: #e9dcff; }
+
+  .empty { text-align: center; padding: 2rem 1rem; color: var(--soft); }
+
+  @media (max-width: 560px) {
+    .card { grid-template-columns: minmax(0, 1fr); }
+    .figure { justify-content: flex-start; min-height: 0; }
+    .moon { width: 3.5rem; height: 3.5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stars, .hero-ghost, .figure svg, .busy::before { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- shared ghost colors, drawn once and reused -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="gh1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f1e6ff"/></linearGradient>
+    <linearGradient id="gh2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4ecff"/><stop offset="1" stop-color="#d4c4ff"/></linearGradient>
+    <linearGradient id="gh3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2e8ff"/><stop offset="1" stop-color="#a9b6e6"/></linearGradient>
+    <linearGradient id="gh4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3dadc"/><stop offset="1" stop-color="#6c8c98"/></linearGradient>
+    <linearGradient id="gh5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d7bfe8"/><stop offset="1" stop-color="#653872"/></linearGradient>
+    <radialGradient id="au1"><stop offset="0" stop-color="#8de8c8" stop-opacity="0.35"/><stop offset="1" stop-color="#8de8c8" stop-opacity="0"/></radialGradient>
+    <radialGradient id="au2"><stop offset="0" stop-color="#b9a4ff" stop-opacity="0.35"/><stop offset="1" stop-color="#b9a4ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="au3"><stop offset="0" stop-color="#ffcf6b" stop-opacity="0.3"/><stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="au4"><stop offset="0" stop-color="#ff8a4c" stop-opacity="0.38"/><stop offset="1" stop-color="#ff8a4c" stop-opacity="0"/></radialGradient>
+    <radialGradient id="au5"><stop offset="0" stop-color="#ff5d7a" stop-opacity="0.5"/><stop offset="1" stop-color="#ff5d7a" stop-opacity="0"/></radialGradient>
+  </defs>
+</svg>
+
+<div class="sky" id="sky" aria-hidden="true"><div class="moon"></div></div>
+
+<div class="page">
+  <header>
+    <span class="hero-ghost" id="hero" aria-hidden="true"></span>
+    <h1>CodeBoo</h1>
+    <p class="lede">Paste a public GitHub link or a folder on this computer. We’ll find the ghosts hiding in the code: forgotten promises, risky spots and quiet failures. The scarier the ghost, the sooner it needs fixing.</p>
+
+    <div class="hunt-form">
+      <input id="source" type="text" autocomplete="off" spellcheck="false" aria-label="GitHub link or folder path"
+             placeholder="https://github.com/owner/repo, or a folder on this computer">
+      <button class="go" id="go" type="button">Start the hunt</button>
+    </div>
+    <p class="status" id="status"><span class="dot"></span><span id="status-text">Checking for the spirits…</span></p>
+    <div id="error" class="error" hidden></div>
+    <div id="busy" class="busy" hidden><span id="busy-text">Searching the shadows…</span></div>
+  </header>
+
+  <section id="summary" hidden>
+    <h2 id="s-title"></h2>
+    <p class="repo" id="s-repo"></p>
+    <div class="counts" id="s-counts"></div>
+    <p class="note" id="s-note"></p>
+  </section>
+
+  <section id="list-wrap" hidden>
+    <div class="toolbar">
+      <span id="toolbar-text"></span>
+      <label><input type="checkbox" id="scary-only"> Only the scary ones</label>
+    </div>
+    <div class="ghosts" id="ghosts"></div>
+  </section>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const LEVEL_TITLE = { 1: "Wisp", 2: "Little ghost", 3: "Haunting", 4: "Specter", 5: "Phantom" };
+  const URGENCY = { 1: "Whenever", 2: "Tidy up", 3: "Plan it", 4: "Fix soon", 5: "Fix today" };
+  const SIZE = { 1: 62, 2: 70, 3: 80, 4: 92, 5: 106 };
+
+  let ghosts = [];
+  let huntId = "";
+  let runToken = 0;
+  let modelReady = false;
+
+  /* ---------- the ghosts: cuter when small, scarier when urgent ---------- */
+
+  function ghostSVG(level, size) {
+    const body = "M15 110 L15 50 C15 22 32 8 50 8 C68 8 85 22 85 50 L85 110 ";
+    const bottoms = {
+      1: "Q76.25 122 67.5 110 Q58.75 98 50 110 Q41.25 122 32.5 110 Q23.75 98 15 110 Z",
+      2: "Q76.25 122 67.5 110 Q58.75 98 50 110 Q41.25 122 32.5 110 Q23.75 98 15 110 Z",
+      3: "L85 112 Q76 126 67 108 Q58 94 50 112 Q42 128 33 108 Q24 94 15 112 Z",
+      4: "L85 112 L77 100 L70 118 L62 100 L54 120 L46 100 L38 118 L30 100 L23 116 L15 100 Z",
+      5: "L85 112 L78 98 L72 122 L64 100 L56 124 L48 100 L40 122 L32 100 L24 120 L17 98 Z",
+    };
+    const ink = level >= 4 ? "#1a1030" : "#2b2350";
+    let eyes = "", mouth = "", extra = "";
+
+    if (level === 1) {
+      eyes = '<ellipse cx="38" cy="50" rx="5.5" ry="7" fill="' + ink + '"/><ellipse cx="62" cy="50" rx="5.5" ry="7" fill="' + ink + '"/>' +
+             '<circle cx="36.2" cy="47" r="1.9" fill="#fff"/><circle cx="60.2" cy="47" r="1.9" fill="#fff"/>';
+      mouth = '<path d="M44 65 Q50 71 56 65" fill="none" stroke="' + ink + '" stroke-width="2.2" stroke-linecap="round"/>';
+      extra = '<circle cx="29" cy="62" r="5" fill="#ff9ec4" opacity="0.55"/><circle cx="71" cy="62" r="5" fill="#ff9ec4" opacity="0.55"/>' +
+              '<path d="M92 8 L93.6 13 L98.6 14.6 L93.6 16.2 L92 21.2 L90.4 16.2 L85.4 14.6 L90.4 13 Z" fill="#ffe9a8"/>';
+    } else if (level === 2) {
+      eyes = '<ellipse cx="38" cy="50" rx="5.2" ry="6.2" fill="' + ink + '"/><ellipse cx="62" cy="50" rx="5.2" ry="6.2" fill="' + ink + '"/>' +
+             '<circle cx="36.4" cy="47.6" r="1.6" fill="#fff"/><circle cx="60.4" cy="47.6" r="1.6" fill="#fff"/>';
+      mouth = '<path d="M43 64 Q50 77 57 64 Z" fill="' + ink + '"/>';
+      extra = '<circle cx="29" cy="62" r="4.6" fill="#ff9ec4" opacity="0.45"/><circle cx="71" cy="62" r="4.6" fill="#ff9ec4" opacity="0.45"/>';
+    } else if (level === 3) {
+      eyes = '<ellipse cx="38" cy="52" rx="5" ry="4" fill="#241c45"/><ellipse cx="62" cy="52" rx="5" ry="4" fill="#241c45"/>' +
+             '<path d="M32 49 H44 M56 49 H68" stroke="#241c45" stroke-width="2.4" stroke-linecap="round"/>';
+      mouth = '<path d="M43 69 Q47 66 50 69 Q53 72 57 69" fill="none" stroke="#241c45" stroke-width="2.2" stroke-linecap="round"/>';
+    } else if (level === 4) {
+      eyes = '<path d="M31 45 Q38 50 45 54 Q43 60 36 59 Q30 57 31 45 Z" fill="' + ink + '"/><path d="M69 45 Q62 50 55 54 Q57 60 64 59 Q70 57 69 45 Z" fill="' + ink + '"/>' +
+             '<circle cx="38" cy="55" r="2.3" fill="#ffb454"/><circle cx="62" cy="55" r="2.3" fill="#ffb454"/>';
+      mouth = '<path d="M38 68 L43 63 L47 69 L50 63 L53 69 L57 63 L62 68" fill="none" stroke="' + ink + '" stroke-width="2.4" stroke-linejoin="round"/>';
+    } else {
+      eyes = '<ellipse cx="37" cy="52" rx="7.5" ry="10" fill="#12071c"/><ellipse cx="63" cy="52" rx="7.5" ry="10" fill="#12071c"/>' +
+             '<circle cx="37" cy="53" r="3.3" fill="#ff5d7a"/><circle cx="63" cy="53" r="3.3" fill="#ff5d7a"/>' +
+             '<path d="M28 37 L45 44 M72 37 L55 44" stroke="#12071c" stroke-width="2.6" stroke-linecap="round"/>';
+      mouth = '<path d="M34 64 Q50 94 66 64 Q50 70 34 64 Z" fill="#12071c"/>' +
+              '<path d="M38 66 L41 71 L44 67.5 L47 72 L50 68 L53 72 L56 67.5 L59 71 L62 66 Z" fill="#fff"/>';
+      extra = '<path d="M66 16 L60 29 L65 33 L57 48" fill="none" stroke="#12071c" stroke-opacity="0.3" stroke-width="1.6"/>';
+    }
+
+    const w = size || SIZE[level];
+    return '<svg viewBox="-10 -6 120 136" width="' + w + '" height="' + Math.round(w * 136 / 120) + '" aria-hidden="true" focusable="false">' +
+      '<ellipse cx="50" cy="62" rx="54" ry="62" fill="url(#au' + level + ')"/>' +
+      '<path d="' + body + bottoms[level] + '" fill="url(#gh' + level + ')" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linejoin="round"/>' +
+      eyes + mouth + extra + '</svg>';
+  }
+
+  /* ---------- background stars (two twinkling layers, cheap to draw) ---------- */
+
+  function buildStars() {
+    const sky = $("sky");
+    const scale = Math.min(1, (innerWidth * innerHeight) / 1400000);
+    const colors = ["#ffffff", "#d6d7ff", "#ffe9b8"];
+    const pick = (list) => list[Math.floor(Math.random() * list.length)];
+    [["a", Math.round(70 * scale) + 20, [0, 0.5]], ["b", Math.round(40 * scale) + 12, [0.6, 1.1]]].forEach((cfg) => {
+      const el = document.createElement("div");
+      el.className = "stars " + cfg[0];
+      const shadows = [];
+      for (let i = 0; i < cfg[1]; i++) {
+        shadows.push((Math.random() * 100).toFixed(2) + "vw " + (Math.random() * 100).toFixed(2) + "vh 0 " + pick(cfg[2]) + "px " + pick(colors));
+      }
+      el.style.boxShadow = shadows.join(",");
+      sky.appendChild(el);
+    });
+  }
+  try { buildStars(); } catch (e) { /* decoration only */ }
+  try { $("hero").innerHTML = ghostSVG(1, 80); } catch (e) { /* decoration only */ }
+
+  /* ---------- app ---------- */
+
+  async function checkHealth() {
+    const box = $("status"), text = $("status-text");
+    try {
+      const h = await (await fetch("/api/health")).json();
+      modelReady = !!(h.ollama && h.model_present);
+      if (modelReady) {
+        box.className = "status ok";
+        text.textContent = "The spirits are awake (" + h.model + " is running on this machine)";
+      } else {
+        box.className = "status bad";
+        text.textContent = !h.ollama
+          ? "Ollama isn’t running, so I can find ghosts but not explain them in plain English. Start it with: ollama serve"
+          : "Model not installed, so explanations will be basic. Run: ollama pull " + h.model;
+      }
+    } catch (e) {
+      box.className = "status bad";
+      text.textContent = "Can’t reach the CodeBoo server.";
+    }
+  }
+
+  function showError(msg) {
+    const el = $("error");
+    el.textContent = msg;
+    el.hidden = !msg;
+  }
+
+  function busy(msg) {
+    $("busy").hidden = !msg;
+    if (msg) $("busy-text").textContent = msg;
+  }
+
+  function headline(counts, total) {
+    const c = (n) => counts[String(n)] || 0;
+    if (!total) return "A peaceful graveyard";
+    if (c(5) > 0) return "Properly cursed";
+    if (c(4) >= 3 || c(4) + c(3) >= 8) return "Seriously haunted";
+    if (c(4) > 0 || c(3) >= 3) return "Haunted";
+    return "Only mildly haunted";
+  }
+
+  function renderSummary(data) {
+    $("s-title").textContent = headline(data.counts, data.total);
+    $("s-repo").textContent = data.repo + " · " + data.files + " files, " + data.lines.toLocaleString() + " lines looked at";
+    const row = $("s-counts");
+    row.replaceChildren();
+    [5, 4, 3, 2, 1].forEach((level) => {
+      const item = document.createElement("div");
+      item.className = "count";
+      item.innerHTML = ghostSVG(level, 34);
+      const b = document.createElement("b");
+      b.textContent = data.counts[String(level)] || 0;
+      const label = document.createElement("span");
+      label.textContent = LEVEL_TITLE[level];
+      item.append(b, label);
+      row.appendChild(item);
+    });
+    const bits = ["This is a quick look with simple rules, not a security audit. Some ghosts may be false alarms, and some real problems can hide from a scan like this."];
+    if (data.truncated) bits.push("The project was large, so only the first part was searched.");
+    if (data.total > data.shown) bits.push("Showing the " + data.shown + " most urgent of " + data.total + " ghosts.");
+    $("s-note").textContent = bits.join(" ");
+    $("summary").hidden = false;
+  }
+
+  function renderList() {
+    const scaryOnly = $("scary-only").checked;
+    const list = ghosts.filter((g) => !scaryOnly || g.level >= 4);
+    const holder = $("ghosts");
+    const openIds = new Set(Array.from(holder.querySelectorAll("details[open]")).map((d) => d.dataset.id));
+    holder.replaceChildren();
+    $("toolbar-text").textContent = list.length + (list.length === 1 ? " ghost" : " ghosts") + ", most urgent first";
+    if (!list.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = ghosts.length ? "No scary ghosts here. Untick the box to see the small ones." : "No ghosts found. That doesn’t prove the code is safe, but nothing jumped out.";
+      holder.appendChild(p);
+    }
+    list.forEach((g, i) => holder.appendChild(card(g, i, openIds)));
+    $("list-wrap").hidden = false;
+  }
+
+  function card(g, i, openIds) {
+    const el = document.createElement("article");
+    el.className = "card l" + g.level;
+
+    const fig = document.createElement("div");
+    fig.className = "figure";
+    fig.innerHTML = ghostSVG(g.level);
+    fig.firstChild.style.setProperty("--delay", (-((i * 0.7) % 4)).toFixed(1) + "s");
+    fig.firstChild.style.setProperty("--bob", (3.2 + (i % 4) * 0.4).toFixed(1) + "s");
+
+    const body = document.createElement("div");
+    const tags = document.createElement("div");
+    tags.className = "tags";
+    const level = document.createElement("span");
+    level.className = "level";
+    level.textContent = g.name + ", the " + LEVEL_TITLE[g.level].toLowerCase();
+    const kind = document.createElement("span");
+    kind.className = "kind";
+    kind.textContent = g.label;
+    const urgency = document.createElement("span");
+    urgency.className = "urgency";
+    urgency.textContent = URGENCY[g.level];
+    tags.append(level, kind, urgency);
+
+    const where = document.createElement("p");
+    where.className = "where";
+    where.textContent = g.file + ":" + g.line;
+    const plain = document.createElement("p");
+    plain.className = "plain";
+    plain.textContent = g.plain;
+    const fix = document.createElement("p");
+    fix.className = "fix";
+    const fixLabel = document.createElement("b");
+    fixLabel.textContent = "What to do: ";
+    fix.append(fixLabel, document.createTextNode(g.fix));
+    body.append(tags, where, plain, fix);
+
+    if (g.verdict) {
+      const v = document.createElement("span");
+      v.className = "verdict " + g.verdict;
+      v.textContent = g.verdict === "real" ? "Looks like a real problem" : g.verdict === "fine" ? "Probably harmless" : "Hard to tell from here";
+      body.appendChild(v);
+    }
+    if (g.snippet) {
+      const d = document.createElement("details");
+      d.dataset.id = g.id;
+      d.open = !!(openIds && openIds.has(g.id));
+      const s = document.createElement("summary");
+      s.textContent = "See the code";
+      const pre = document.createElement("pre");
+      pre.textContent = g.snippet;
+      d.append(s, pre);
+      body.appendChild(d);
+    }
+    el.append(fig, body);
+    return el;
+  }
+
+  async function explainAll(token) {
+    const targets = ghosts.slice(0, 24).map((g) => g.id);
+    if (!modelReady || !targets.length) { busy(""); return; }
+    const batches = [];
+    for (let i = 0; i < targets.length; i += 4) batches.push(targets.slice(i, i + 4));
+    let done = 0;
+    for (const ids of batches) {
+      if (token !== runToken) return;
+      busy("Asking the spirits to explain (" + done + " of " + targets.length + ")…");
+      try {
+        const res = await fetch("/api/explain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hunt_id: huntId, ids }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "The spirits stayed quiet.");
+        if (token !== runToken) return;
+        data.results.forEach((r) => {
+          const g = ghosts.find((x) => x.id === r.id);
+          if (!g) return;
+          g.plain = r.plain;
+          if (r.fix) g.fix = r.fix;
+          g.verdict = r.verdict;
+          g.level = r.urgency;
+        });
+        renderList();
+      } catch (e) {
+        if (token === runToken) {
+          busy("");
+          showError("The explanations stopped early: " + e.message + " The basic descriptions are still shown.");
+        }
+        return;
+      }
+      done += ids.length;
+    }
+    if (token !== runToken) return;
+    // Final pass: re-rank now that the spirits have weighed in.
+    ghosts.forEach((g, i) => { g.order = g.order ?? i; });
+    ghosts.sort((a, b) => b.level - a.level || a.order - b.order);
+    renderList();
+    busy("");
+  }
+
+  async function startHunt() {
+    const source = $("source").value.trim();
+    if (!source) { showError("Paste a GitHub link or a folder path first."); return; }
+    showError("");
+    const token = ++runToken;
+    $("go").disabled = true;
+    $("summary").hidden = true;
+    $("list-wrap").hidden = true;
+    busy("Searching the shadows…");
+    try {
+      const res = await fetch("/api/hunt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      if (token !== runToken) return;
+      huntId = data.hunt_id;
+      ghosts = data.ghosts.map((g, i) => Object.assign(g, { order: i, verdict: null }));
+      renderSummary(data);
+      renderList();
+      $("go").disabled = false;
+      await explainAll(token);
+    } catch (e) {
+      busy("");
+      showError(e.message);
+    } finally {
+      if (token === runToken) {
+        $("go").disabled = false;
+      }
+    }
+  }
+
+  $("go").addEventListener("click", startHunt);
+  $("source").addEventListener("keydown", (e) => { if (e.key === "Enter") startHunt(); });
+  $("scary-only").addEventListener("change", () => { if (ghosts.length) renderList(); });
+
+  checkHealth();
+</script>
+</body>
+</html>

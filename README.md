@@ -68,7 +68,3 @@ All are optional environment variables.
 - The server listens on localhost only and never logs paths or code.
 - Code is scanned on your computer, and the model runs on your computer. The only network use is downloading a GitHub archive when you ask for one.
 - Secret values are hidden in everything shown on the page and everything sent to the model.
-
-## Models and licenses
-
-Each model has its own license. Check the model card for whichever model you use before you publish anything made with it.
